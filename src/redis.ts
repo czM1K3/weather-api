@@ -1,8 +1,9 @@
 import { connect } from "redis";
+import { redisHostname, redisPort } from "./env.ts";
 
 const redis = await connect({
-	hostname: "localhost",
-	port: 6379,
+	hostname: redisHostname,
+	port: redisPort,
 });
 
 export const save = async (key: string, data: string) => {
