@@ -44,7 +44,6 @@ jobs:
           push: true
           tags: ${{ steps.containerMeta.outputs.tags }}
           labels: ${{ steps.containerMeta.outputs.labels }}
-            - name: Prune
       - name: Prune old images
         uses: vlaurin/action-ghcr-prune@v0.5.0
         with:
