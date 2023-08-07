@@ -1,7 +1,7 @@
 FROM lukechannings/deno:v1.35.2 as builder
 
 WORKDIR /app
-COPY src/ src/
+COPY . .
 RUN deno compile --allow-read --allow-net --allow-env --output server ./src/index.ts
 
 FROM debian:stable-slim
