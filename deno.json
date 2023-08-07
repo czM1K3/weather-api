@@ -1,12 +1,13 @@
 {
 	"imports": {
 		"cors": "https://deno.land/x/cors@v1.2.2/mod.ts",
+		"deno-environment": "https://deno.land/x/deno_environment@0.2/mod.ts",
 		"opine": "https://deno.land/x/opine@2.3.4/mod.ts",
 		"redis": "https://deno.land/x/redis@v0.31.0/mod.ts",
 		"image": "https://deno.land/x/imagescript@1.2.15/mod.ts",
 		"zod": "https://deno.land/x/zod@v3.21.4/mod.ts"
 	},
 	"tasks": {
-		"dev": "deno run --watch --allow-net --allow-read src/index.ts"
+		"dev": "deno run --watch --allow-net --allow-env --allow-read src/index.ts"
 	}
 }

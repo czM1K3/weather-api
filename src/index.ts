@@ -2,6 +2,7 @@ import { opine } from "opine";
 import { opineCors } from "cors";
 import ChmiApi from "./chmi-api.ts";
 import { inputSchema } from "./input.ts";
+import { past } from "./env.ts";
 
 const app = opine();
 
@@ -39,7 +40,7 @@ app.get("/api/get/:year/:month/:day/:hour/:minute", async (req, res) => {
 	const currentTime =
 		Math.round(currentDate.getTime() / 1000 / 60) +
 		currentDate.getTimezoneOffset();
-	if (requestedTime > currentTime || requestedTime < currentTime - 130) {
+	if (requestedTime > currentTime || requestedTime < currentTime - (past * 10) - 10) {
 	// if (requestedTime > currentTime) {
 		res.send("Unsupported time").setStatus(400);
 		return;

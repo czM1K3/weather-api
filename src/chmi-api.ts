@@ -1,5 +1,6 @@
 import { Image, decode } from "image";
 import { get, save } from "./redis.ts";
+import { url, past } from "./env.ts"
 
 const f = (input: number) => {
 	const str = input.toString();
@@ -23,14 +24,14 @@ const ChmiApi = () => {
 			lastPossibleDate = new Date(lastPossibleDate.getTime() - 10 * 60 * 1000);
 		
 		const arr: {url: string, label: string}[] = [];
-		for (let i = 0; i < 12; i++) {
+		for (let i = 0; i < past; i++) {
 			const date = new Date(lastPossibleDate.getTime() - i * 10 * 60 * 1000);
 			arr.push({
 				label: date.toLocaleTimeString("cs-CZ", {
 					timeZone: "Europe/Prague",
 					timeStyle: "short"
 				}),
-				url: `http://localhost:8080/api/get/${date.getUTCFullYear()}/${f(
+				url: `${url}/api/get/${date.getUTCFullYear()}/${f(
 					date.getUTCMonth()+1
 				)}/${f(date.getUTCDate())}/${f(date.getUTCHours())}/${f(date.getUTCMinutes())}`,
 			});
