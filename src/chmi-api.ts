@@ -1,10 +1,6 @@
 import { Image, decode } from "image";
 import { get, save } from "./redis.ts";
 
-const fileReg = new RegExp(
-	/"(pacz2gmaps3\.z_max3d\.\d\d\d\d\d\d\d\d\.\d\d\d\d\.\d\.png)"/g
-);
-
 const f = (input: number) => {
 	const str = input.toString();
 	return str.length == 1 ? "0" + str : str;
@@ -12,14 +8,35 @@ const f = (input: number) => {
 
 const ChmiApi = () => {
 	const getList = async () => {
-		const rawData = await fetch(
-			"https://www.chmi.cz/files/portal/docs/meteo/rad/inca-cz/data/czrad-z_max3d/"
+		const currentDate = new Date();
+		const lastPossibleTime = Math.floor(currentDate.getTime() / 1000 / 60 / 10 ) * 10 * 60 * 1000;
+		let lastPossibleDate = new Date(lastPossibleTime);
+
+		const possibleImage = await getImage(
+			lastPossibleDate.getUTCFullYear(),
+			lastPossibleDate.getUTCMonth() + 1,
+			lastPossibleDate.getUTCDate(),
+			lastPossibleDate.getUTCHours(),
+			lastPossibleDate.getUTCMinutes()
 		);
-		const data = await rawData.text();
-		const matches = data.matchAll(fileReg);
-		const res: string[] = [];
-		for (const match of matches) res.push(match[1]);
-		return res;
+		if (!possibleImage) 
+			lastPossibleDate = new Date(lastPossibleDate.getTime() - 10 * 60 * 1000);
+		
+		const arr: {url: string, label: string}[] = [];
+		for (let i = 0; i < 12; i++) {
+			const date = new Date(lastPossibleDate.getTime() - i * 10 * 60 * 1000);
+			arr.push({
+				label: date.toLocaleTimeString("cs-CZ", {
+					timeZone: "Europe/Prague",
+					timeStyle: "short"
+				}),
+				url: `http://localhost:8080/api/get/${date.getUTCFullYear()}/${f(
+					date.getUTCMonth()+1
+				)}/${f(date.getUTCDate())}/${f(date.getUTCHours())}/${f(date.getUTCMinutes())}`,
+			});
+		}
+			
+		return arr;
 	};
 
 	const getImage = async (

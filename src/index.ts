@@ -11,9 +11,10 @@ app.get("/", (_req, res) => {
 	res.send("Ahoj");
 });
 
-app.get("/api/data", async (_req, res) => {
+app.get("/api/get", async (_req, res) => {
+	res.setHeader("Content-Type", "application/json");
 	const data = await ChmiApi().getList();
-	res.send(data.join("<br>"));
+	res.send(JSON.stringify(data));
 });
 
 app.get("/api/get/:year/:month/:day/:hour/:minute", async (req, res) => {
@@ -38,8 +39,8 @@ app.get("/api/get/:year/:month/:day/:hour/:minute", async (req, res) => {
 	const currentTime =
 		Math.round(currentDate.getTime() / 1000 / 60) +
 		currentDate.getTimezoneOffset();
-	// if (requestedTime > currentTime || requestedTime < currentTime - 60) {
-	if (requestedTime > currentTime) {
+	if (requestedTime > currentTime || requestedTime < currentTime - 130) {
+	// if (requestedTime > currentTime) {
 		res.send("Unsupported time").setStatus(400);
 		return;
 	}
