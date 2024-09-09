@@ -1,12 +1,13 @@
-import { opine } from "opine";
-import { opineCors } from "cors";
+import express from "express";
+import cors from "cors";
 import ChmiApi from "./chmi-api.ts";
 import { inputSchema } from "./input.ts";
 import { past } from "./env.ts";
+import stream from "stream";
 
-const app = opine();
+const app = express();
 
-app.use(opineCors());
+app.use(cors());
 
 app.get("/", (_req, res) => {
 	res.send("Ahoj");
@@ -21,7 +22,7 @@ app.get("/api/get", async (_req, res) => {
 app.get("/api/get/:year/:month/:day/:hour/:minute", async (req, res) => {
 	const input = inputSchema.safeParse(req.params);
 	if (!input.success) {
-		res.send("Invalid address").setStatus(403);
+		res.send("Invalid address").status(403);
 		return;
 	}
 	const requestedDate = new Date(
@@ -33,7 +34,7 @@ app.get("/api/get/:year/:month/:day/:hour/:minute", async (req, res) => {
 	);
 	const requestedTime = requestedDate.getTime() / 1000 / 60;
 	if (requestedTime % 10 !== 0) {
-		res.send("Invalid address").setStatus(403);
+		res.send("Invalid address").status(403);
 		return;
 	}
 	const currentDate = new Date();
@@ -42,7 +43,7 @@ app.get("/api/get/:year/:month/:day/:hour/:minute", async (req, res) => {
 		currentDate.getTimezoneOffset();
 	if (requestedTime > currentTime || requestedTime < currentTime - (past * 10) - 10) {
 	// if (requestedTime > currentTime) {
-		res.send("Unsupported time").setStatus(400);
+		res.send("Unsupported time").status(400);
 		return;
 	}
 	const image = await ChmiApi().getImage(
@@ -53,9 +54,11 @@ app.get("/api/get/:year/:month/:day/:hour/:minute", async (req, res) => {
 		input.data.minute
 	);
 	if (!image) {
-		res.send("Failed to get image").setStatus(500);
+		res.send("Failed to get image").status(500);
 		return;
 	}
+  const readStream = new stream.PassThrough();
+  readStream.end(image);
 
 	res.setHeader("Content-Type", "image/png");
 	res.setHeader(
@@ -63,7 +66,8 @@ app.get("/api/get/:year/:month/:day/:hour/:minute", async (req, res) => {
 		"attachment; filename=" +
 			`meteo-${input.data.year}-${input.data.month}-${input.data.day}-${input.data.hour}-${input.data.minute}.png`
 	);
-	res.send(image);
+	res.type("png");
+  readStream.pipe(res);
 });
 
 app.listen(8080, () => {

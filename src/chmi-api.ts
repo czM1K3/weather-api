@@ -1,4 +1,4 @@
-import { Image, decode } from "image";
+import { Image, decode } from "imagescript";
 import { get, save } from "./redis.ts";
 import { url, past } from "./env.ts"
 
@@ -20,9 +20,9 @@ const ChmiApi = () => {
 			lastPossibleDate.getUTCHours(),
 			lastPossibleDate.getUTCMinutes()
 		);
-		if (!possibleImage) 
+		if (!possibleImage)
 			lastPossibleDate = new Date(lastPossibleDate.getTime() - 10 * 60 * 1000);
-		
+
 		const arr: {url: string, label: string}[] = [];
 		for (let i = 0; i < past; i++) {
 			const date = new Date(lastPossibleDate.getTime() - i * 10 * 60 * 1000);
@@ -36,7 +36,7 @@ const ChmiApi = () => {
 				)}/${f(date.getUTCDate())}/${f(date.getUTCHours())}/${f(date.getUTCMinutes())}`,
 			});
 		}
-			
+
 		return arr;
 	};
 
@@ -54,7 +54,7 @@ const ChmiApi = () => {
 				const parsed = Uint8Array.from(JSON.parse(cached));
 				return parsed;
 			}
-			
+
 			const rawData = await fetch(
 				`https://www.chmi.cz/files/portal/docs/meteo/rad/inca-cz/data/czrad-z_max3d/pacz2gmaps3.z_max3d.${year}${f(
 					month
@@ -64,7 +64,7 @@ const ChmiApi = () => {
 			const image = await decode(data) as Image;
 			const finalImage = await image.crop(1, 95, 597, 320).encode();
 			const stringified = JSON.stringify(Array.from(finalImage));
-			await save(key, stringified);			
+			await save(key, stringified);
 			return finalImage;
 		} catch {
 			return null;
