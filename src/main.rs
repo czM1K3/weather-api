@@ -3,6 +3,7 @@ use rocket::http::{ContentType, Header};
 use rocket::response::{Responder, Response};
 use rocket::Request;
 use std::io::Cursor;
+use std::time::Duration;
 use chrono::prelude::*;
 use rocket::State;
 use moka::future::Cache;
@@ -57,7 +58,7 @@ impl GlobalState {
         GlobalState {
             past,
             url: std::env::var("URL").unwrap_or(format!("http://localhost:8000")),
-            cache: Cache::new(100),
+            cache: Cache::builder().time_to_live(Duration::from_secs(60 * 60)).build(),
         }
     }
 }
