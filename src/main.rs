@@ -5,6 +5,7 @@ use rocket::Request;
 use std::io::Cursor;
 use chrono::prelude::*;
 use rocket::State;
+use moka::future::Cache;
 
 mod chmi_api;
 
@@ -42,6 +43,7 @@ impl<'r> Responder<'r, 'static> for CustomBinaryResponse {
 struct GlobalState {
     pub past: i64,
     pub url: String,
+    pub cache: Cache<String, Vec<u8>>,
 }
 
 impl GlobalState {
@@ -53,13 +55,14 @@ impl GlobalState {
         GlobalState {
             past,
             url: std::env::var("URL").unwrap_or(format!("http://localhost:8000")),
+            cache: Cache::new(100),
         }
     }
 }
 
 #[get("/api/get")]
 async fn get_list(state: &State<GlobalState>) -> CustomBinaryResponse {
-    let arr = get_all(state.past, &state.url).await;
+    let arr = get_all(state.past, &state.url, state.cache.clone()).await;
     let json = serde_json::to_string(&arr).unwrap();
     CustomBinaryResponse {
         data: json.as_bytes().to_vec(),
@@ -83,7 +86,7 @@ async fn get_single(year: u16, month: u8, day: u8, hour: u8, minute: u8, state: 
         return None;
     }
 
-    let image = get_image(year, month, day, hour, minute).await;
+    let image = get_image(year, month, day, hour, minute, state.cache.clone()).await;
     match image {
         Some(data) => Some(CustomBinaryResponse {
             data,

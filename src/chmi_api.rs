@@ -5,6 +5,7 @@ use std::io::Cursor;
 use image::imageops::crop_imm;
 use chrono::prelude::*;
 use chrono::DateTime;
+use moka::future::Cache;
 
 #[derive(Serialize)]
 pub struct LabelUrl {
@@ -19,7 +20,7 @@ fn f (input: u32) -> String {
     format!("{}", input)
 }
 
-pub async fn get_all(past: i64, url: &String) -> Vec<LabelUrl> {
+pub async fn get_all(past: i64, url: &String, cache: Cache<String, Vec<u8>>) -> Vec<LabelUrl> {
     let current_date = Utc::now().to_utc();
     let current_time = ((current_date.timestamp_millis() as f64 / 1000 as f64/ 60 as f64/ 5 as f64).floor() as i64) * 5 * 60 * 1000;
     let mut last_possible_date = DateTime::from_timestamp_millis(current_time.into()).unwrap();
@@ -28,7 +29,8 @@ pub async fn get_all(past: i64, url: &String) -> Vec<LabelUrl> {
         last_possible_date.month().try_into().unwrap(),
         last_possible_date.day().try_into().unwrap(),
         last_possible_date.hour().try_into().unwrap(),
-        last_possible_date.minute().try_into().unwrap()
+        last_possible_date.minute().try_into().unwrap(),
+        cache,
     ).await;
     if possible_image == None {
         last_possible_date = DateTime::from_timestamp_millis(last_possible_date.timestamp_millis() - 5 * 60 * 1000).unwrap();
@@ -46,10 +48,14 @@ pub async fn get_all(past: i64, url: &String) -> Vec<LabelUrl> {
     arr
 }
 
-pub async fn get_image(year: u16, month: u8, day: u8, hour: u8, minute: u8) -> Option<Vec<u8>> {
+pub async fn get_image(year: u16, month: u8, day: u8, hour: u8, minute: u8, cache: Cache<String, Vec<u8>>) -> Option<Vec<u8>> {
     let url = format!("https://www.chmi.cz/files/portal/docs/meteo/rad/inca-cz/data/czrad-z_max3d/pacz2gmaps3.z_max3d.{}{}{}.{}{}.0.png", year, f(month.into()), f(day.into()), f(hour.into()), f(minute.into()));
+    let cached = cache.get(&url).await;
+    if cached != None {
+        return Some(cached.unwrap());
+    }
 
-    let mut response = get(url).await.expect("Failed to download image");
+    let mut response = get(url.clone()).await.expect("Failed to download image");
     if response.status() != StatusCode::Ok {
         return None;
     }
@@ -62,5 +68,7 @@ pub async fn get_image(year: u16, month: u8, day: u8, hour: u8, minute: u8) -> O
     let mut buf = Vec::new();
     img_resized_converted.write_to(&mut Cursor::new(&mut buf), ImageOutputFormat::Png)
         .expect("Failed to write image to buffer");
+    cache.insert(url, buf.clone()).await;
+
     Some(buf)
 }
