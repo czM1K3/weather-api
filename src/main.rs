@@ -6,6 +6,8 @@ use std::io::Cursor;
 use chrono::prelude::*;
 use rocket::State;
 use moka::future::Cache;
+use rocket::http::Method;
+use rocket_cors::{AllowedOrigins, CorsOptions};
 
 mod chmi_api;
 
@@ -102,8 +104,18 @@ async fn get_single(year: u16, month: u8, day: u8, hour: u8, minute: u8, state: 
 
 #[launch]
 fn rocket() -> _ {
+    let cors = CorsOptions::default()
+    .allowed_origins(AllowedOrigins::all())
+    .allowed_methods(
+        vec![Method::Get]
+            .into_iter()
+            .map(From::from)
+            .collect(),
+    )
+    .allow_credentials(true);
     rocket::build()
         .manage(GlobalState::new())
+        .attach(cors.to_cors().unwrap())
         .mount("/", routes![get_list])
         .mount("/", routes![get_single])
 }

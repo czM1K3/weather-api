@@ -14,6 +14,7 @@ RUN apt update \
 EXPOSE 8000
 
 ENV TZ=Etc/Prague
+ENV ROCKET_ADDRESS=0.0.0.0
 
 RUN groupadd runner && useradd -g runner runner
 
