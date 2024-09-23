@@ -131,7 +131,7 @@ async fn get_single(
                 Header::new(
                     "Content-Disposition",
                     format!(
-                        "attachment; filename=meteo-{}-{}-{}-{}-{}.png",
+                        "inline; filename=meteo-{}-{}-{}-{}-{}.png",
                         year, month, day, hour, minute
                     ),
                 ),
