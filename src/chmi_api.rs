@@ -3,9 +3,13 @@ use chrono::DateTime;
 use image::imageops::crop_imm;
 use image::{DynamicImage, ImageOutputFormat};
 use moka::future::Cache;
+use oxipng::optimize_from_memory;
+use oxipng::Options;
 use serde::Serialize;
 use std::io::Cursor;
 use surf::{get, StatusCode};
+
+extern crate oxipng;
 
 #[derive(Serialize)]
 pub struct LabelUrl {
@@ -107,6 +111,16 @@ pub async fn get_image(
     img_resized_converted
         .write_to(&mut Cursor::new(&mut buf), ImageOutputFormat::Png)
         .expect("Failed to write image to buffer");
+
+    // Trying to optimize PNG size. Yes, it's slower, but much more effective.
+    let buf_optimized = optimize_from_memory(&buf, &Options::default());
+    match buf_optimized {
+        Ok(optimized) => {
+            buf = optimized;
+        },
+        _ => {},
+    };
+
     // Saving to cache for later.
     cache.insert(url, buf.clone()).await;
 
