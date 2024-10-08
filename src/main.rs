@@ -4,10 +4,12 @@ use moka::future::Cache;
 use rocket::http::Method;
 use rocket::http::{ContentType, Header};
 use rocket::response::{Responder, Response};
+use rocket::tokio::sync::Mutex;
 use rocket::Request;
 use rocket::State;
 use rocket_cors::{AllowedOrigins, CorsOptions};
 use std::io::Cursor;
+use std::sync::Arc;
 use std::time::Duration;
 
 mod chmi_api;
@@ -48,6 +50,7 @@ struct GlobalState {
     pub past: i64,
     pub url: String,
     pub cache: Cache<String, Vec<u8>>,
+    pub mutex: Arc<Mutex<()>>,
 }
 
 impl GlobalState {
@@ -62,6 +65,7 @@ impl GlobalState {
             cache: Cache::builder()
                 .time_to_live(Duration::from_secs(past as u64 * 5 * 60))
                 .build(),
+            mutex: Arc::new(Mutex::new(())),
         }
     }
 }
@@ -69,7 +73,7 @@ impl GlobalState {
 #[get("/api/get")]
 async fn get_list(state: &State<GlobalState>) -> CustomBinaryResponse {
     // Downloading image and returning it. Cache can be cloned, but works globally, so no worries.
-    let arr = get_all(state.past, &state.url, state.cache.clone()).await;
+    let arr = get_all(state.past, &state.url, state.cache.clone(), Arc::clone(&state.mutex)).await;
     // Returning Vector was bit problematic, so creating string my self.
     let json = serde_json::to_string(&arr).unwrap();
     // To get ContentType, I had to use Custom struct to return. And because we already have binary
@@ -121,7 +125,7 @@ async fn get_single(
     }
 
     // Downloading image and returning it. Cache can be cloned, but works globally, so no worries.
-    let image = get_image(year, month, day, hour, minute, state.cache.clone()).await;
+    let image = get_image(year, month, day, hour, minute, state.cache.clone(), Arc::clone(&state.mutex)).await;
     match image {
         Some(data) => Some(CustomBinaryResponse {
             data,

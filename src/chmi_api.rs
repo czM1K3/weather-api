@@ -5,8 +5,10 @@ use image::{DynamicImage, ImageOutputFormat};
 use moka::future::Cache;
 use oxipng::optimize_from_memory;
 use oxipng::Options;
+use rocket::tokio::sync::Mutex;
 use serde::Serialize;
 use std::io::Cursor;
+use std::sync::Arc;
 use surf::{get, StatusCode};
 
 extern crate oxipng;
@@ -25,7 +27,7 @@ fn f(input: u32) -> String {
     format!("{}", input)
 }
 
-pub async fn get_all(past: i64, url: &String, cache: Cache<String, Vec<u8>>) -> Vec<LabelUrl> {
+pub async fn get_all(past: i64, url: &String, cache: Cache<String, Vec<u8>>, mutex: Arc<Mutex<()>>) -> Vec<LabelUrl> {
     let current_date = Utc::now().to_utc();
     // Flooring current date to the last 0 or 5 minutes.
     let current_time =
@@ -44,6 +46,7 @@ pub async fn get_all(past: i64, url: &String, cache: Cache<String, Vec<u8>>) -> 
         last_possible_date.hour().try_into().unwrap(),
         last_possible_date.minute().try_into().unwrap(),
         cache,
+        mutex,
     )
     .await;
     if possible_image == None {
@@ -85,9 +88,15 @@ pub async fn get_image(
     hour: u8,
     minute: u8,
     cache: Cache<String, Vec<u8>>,
+    mutex: Arc<Mutex<()>>,
 ) -> Option<Vec<u8>> {
     // This URL takes UTC!
     let url = format!("https://www.chmi.cz/files/portal/docs/meteo/rad/inca-cz/data/czrad-z_max3d/pacz2gmaps3.z_max3d.{}{}{}.{}{}.0.png", year, f(month.into()), f(day.into()), f(hour.into()), f(minute.into()));
+
+    // Puts mutex over fetching phase, so if multiple requests are made in same time and cache
+    // fails, only one request is made to CHMI server and all other clients waits for response.
+    // Mutex has to be locked before checking cache.
+    let lock = mutex.lock().await;
 
     // Checking in memory cache, if we already have this image saved.
     let cached = cache.get(&url).await;
@@ -123,6 +132,9 @@ pub async fn get_image(
 
     // Saving to cache for later.
     cache.insert(url, buf.clone()).await;
+
+    // When cache is filled, we can let other people to get it from there
+    drop(lock);
 
     Some(buf)
 }
