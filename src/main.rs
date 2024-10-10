@@ -47,9 +47,14 @@ impl<'r> Responder<'r, 'static> for CustomBinaryResponse {
 // End of generated with ChatGPT
 
 struct GlobalState {
+    // How many past images do we allow to send. Default is 24. We can do much more.
     pub past: i64,
+    // Url of server to write full URL to images.
     pub url: String,
+    // This is in memory cache. Redis would be nice and needed, if we had multiple instances
+    // running. But this is fine.
     pub cache: Cache<String, Vec<u8>>,
+    // Mutex used to block concurent requests to CHMI server. More comments in `chmi_api.rs` file.
     pub mutex: Arc<Mutex<()>>,
 }
 

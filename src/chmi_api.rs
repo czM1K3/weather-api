@@ -95,6 +95,11 @@ pub async fn get_image(
 
     // Puts mutex over fetching phase, so if multiple requests are made in same time and cache
     // fails, only one request is made to CHMI server and all other clients waits for response.
+    // Also it allows only one frequest being made in at one time. And side effect is, that if
+    // somebody is requesting new image and after that somebody requests cached image, he will have
+    // to wait for second person. To fix this, we would have to dynamically create mutexes for each
+    // time, so it would be much more complex and also it would allow multiple requests to CHMI
+    // server at one time (we don't want to draw attention to ourselves...).
     // Mutex has to be locked before checking cache.
     let lock = mutex.lock().await;
 
